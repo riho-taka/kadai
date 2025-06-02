@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: EC2 Create
+
+Parameters: 
+  KeyName:
+    Description: KeyPair to allow SSH access
+    Type: "AWS::EC2::KeyPair::KeyName"
+  MyIP:
+    Description: IP address allowed to access EC2
+    Type: String
+    Default: 60.120.68.152
+
+Resources:
+#セキュリティグループ
+  CfSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Test-SG-public
+      GroupDescription: Test-SG-public
+      VpcId: !ImportValue TestVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: "22"
+          ToPort: "22"
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: "80"
+          ToPort: "80"
+#EC2
+  TestInstance1:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      KeyName: !Ref KeyName
+      ImageId: ami-037843ed9009f7d41
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          DeleteOnTermination: true
+          GroupSet:
+            - !Ref CfSecurityGroup
+          SubnetId: !ImportValue TestPublicSubNet1a
+      Tags:
+        - Key: Name
+          Value: Test-cf-instance1
+  TestInstance2:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      KeyName: !Ref KeyName
+      ImageId: ami-037843ed9009f7d41
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          DeleteOnTermination: true
+          GroupSet:
+            - !Ref CfSecurityGroup
+          SubnetId: !ImportValue TestPublicSubNet1c
+      Tags:
+        - Key: Name
+          Value: Test-cf-instance2
+Outputs:
+  CfSecurityGroup: 
+    Value: !Ref CfSecurityGroup
+    Export:
+      Name: CfSecurityGroup

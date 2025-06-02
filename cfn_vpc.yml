@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Test-network
+
+#ここからリソース定義かいていく
+#作成したリソースは!Refで指定できる
+Resources: 
+#VPC
+  TestVPC: 
+    Type: AWS::EC2::VPC
+    Properties:   
+      CidrBlock: 10.1.0.0/21
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: Test-cf-VPC
+#インターネットゲートウェイ
+  TestIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Test-cf-igw
+#IGWをVPCにアタッチ
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref TestVPC
+      InternetGatewayId: !Ref TestIGW
+#ルートテーブル パブリック
+  CfPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TestVPC
+      Tags:
+        - Key: Name
+          Value: cf-RouteTable-public
+#ルート設定 すべての通信がIGWにむくように設定
+  TestRoutePub:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref CfPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref TestIGW
+#ルートテーブル　プライベート
+  CfPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TestVPC
+      Tags:
+        - Key: Name
+          Value: cf-RouteTable-private
+#サブネット　パブリック1a
+  TestPublicSubNet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref TestVPC
+      CidrBlock: 10.1.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: cf-SubNet1a-Public
+#サブネット　パブリック1c
+  TestPublicSubNet1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1c
+      VpcId: !Ref TestVPC
+      CidrBlock: 10.1.1.0/24
+      Tags:
+        - Key: Name
+          Value: cf-SubNet1c-Public
+      MapPublicIpOnLaunch: true
+#ルートテーブルと関連付け 1a
+  PublicSubNet1aRouteTableAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TestPublicSubNet1a
+      RouteTableId: !Ref CfPublicRouteTable
+#ルートテーブルと関連付け 1c
+  PublicSubNet1cRouteTableAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TestPublicSubNet1c
+      RouteTableId: !Ref  CfPublicRouteTable
+#サブネット　プライベート1a
+  TestPrivateSubNet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref TestVPC
+      CidrBlock: 10.1.2.0/24
+      Tags:
+        -  Key: Name
+           Value: cf-SubNet1a-private
+#サブネット　プライベート1c 
+  TestPrivateSubNet1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1c
+      VpcId: !Ref TestVPC
+      CidrBlock: 10.1.3.0/24
+      Tags:
+        -  Key: Name
+           Value: cf-SubNet1c-private
+#ルートテーブルと関連付け 1a
+  PrivateSubNet1aRouteTableAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TestPrivateSubNet1a
+      RouteTableId: !Ref  CfPrivateRouteTable
+#ルートテーブルと関連付け 1c
+  PrivateSubNet1cRouteTableAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TestPrivateSubNet1c
+      RouteTableId: !Ref  CfPrivateRouteTable
+
+Outputs:
+  VPC:
+    Value: !Ref TestVPC
+    Export:
+      Name: TestVPC
+  Subnetpb1a:
+    Value: !Ref TestPublicSubNet1a
+    Export:
+      Name: TestPublicSubNet1a
+  Subnetpb1c:
+    Value: !Ref TestPublicSubNet1c
+    Export:
+      Name: TestPublicSubNet1c

@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: TargetGroup
+
+#ターゲットグループ
+Resources:
+  CfTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Matcher: 
+        HttpCode: 200
+      Name: !Sub ${AWS::StackName}
+      Port: 80
+      Protocol: HTTP
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}
+      TargetType: instance
+      VpcId: !ImportValue TestVPC
+      HealthCheckPath: /Health
+      HealthCheckProtocol: HTTP
+Outputs:
+  TG:
+    Value: !Ref CfTargetGroup
+    Export: 
+      Name: CfTargetGroup

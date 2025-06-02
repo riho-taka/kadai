@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ASG 
+Parameters: 
+  KeyName:
+    Description: KeyPair to allow SSH access
+    Type: "AWS::EC2::KeyPair::KeyName"
+Resources:
+  # セキュリティグループ
+  CfSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Test-SG-public
+      VpcId: !ImportValue TestVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: "22"
+          ToPort: "22"
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: "80"
+          ToPort: "80"
+
+  # 起動テンプレート
+  MyTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: MyTemplate
+      LaunchTemplateData:
+        TagSpecifications:
+          - ResourceType: instance
+            Tags: 
+              - Key: Name
+                Value: test_cf_server
+        KeyName: !Ref KeyName
+        ImageId: ami-037843ed9009f7d41
+        InstanceType: t2.micro
+        SecurityGroupIds:
+          - !Ref CfSecurityGroup
+
+  # AutoScalingGroup 
+  TestASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${AWS::StackName}
+      VPCZoneIdentifier:
+        - !ImportValue TestPublicSubNet1a
+        - !ImportValue TestPublicSubNet1c
+      LaunchTemplate:
+        LaunchTemplateId: !Ref MyTemplate
+        Version: !GetAtt 'MyTemplate.LatestVersionNumber'
+      TargetGroupARNs:
+        - !ImportValue CfTargetGroup
+      DesiredCapacity: 2
+      MaxSize: 4
+      MinSize: 2
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}
+          PropagateAtLaunch: true
+
+  ASGScalingPolicyHigh:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref TestASG
+      PolicyType: StepScaling
+      AdjustmentType: ChangeInCapacity
+      StepAdjustments: 
+        - MetricIntervalLowerBound: 0
+          ScalingAdjustment: 1
+  MyAlarmHighCPU:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm if CPU too high
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref TestASG
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 70
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref ASGScalingPolicyHigh
