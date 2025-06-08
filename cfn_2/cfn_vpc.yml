@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: network-VPC,Public/PrivateSubnet
+
+Parameters:
+  PJPrefix:
+    Type: String
+
+  Az1:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-1a
+  Az2:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-1c
+  VPCCIDR:
+    Type: String
+    Description: CIDR Block for VPC
+    Default: 10.1.0.0/21
+  CIDR1aPublic:
+    Type: String
+    Default: 10.1.0.0/24
+  CIDR1cPublic:
+    Type: String
+    Default: 10.1.1.0/24
+  CIDR1aPrivate:
+    Type: String
+    Default: 10.1.2.0/24
+  CIDR1cPrivate:
+    Type: String
+    Default: 10.1.3.0/24
+
+ 
+Resources: 
+#VPC
+  TestVPC: 
+    Type: AWS::EC2::VPC
+    Properties:   
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${PJPrefix}-Vpc
+#internet gateway
+  TestIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${PJPrefix}-Igw
+#IGWをattach
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref TestVPC
+      InternetGatewayId: !Ref TestIGW
+#RouteTable Public
+  CfPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TestVPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${PJPrefix}-RouteTable-Public
+#Route IGW
+  TestRoutePub:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref CfPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref TestIGW
+#RouteTable Private
+  CfPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref TestVPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${PJPrefix}-RouteTable-Private
+#Subnet Public-1a
+  TestPublicSubNet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref Az1
+      VpcId: !Ref TestVPC
+      CidrBlock: !Ref CIDR1aPublic
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${PJPrefix}-SubNet1a-Public
+#Subnet Public-1c
+  TestPublicSubNet1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref Az2
+      VpcId: !Ref TestVPC
+      CidrBlock: !Ref CIDR1cPublic
+      Tags:
+        - Key: Name
+          Value: !Sub ${PJPrefix}-SubNet1c-Public
+      MapPublicIpOnLaunch: true
+#Association RouteTable-SubnetPub1a
+  PublicSubNet1aRouteTableAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TestPublicSubNet1a
+      RouteTableId: !Ref CfPublicRouteTable
+#Association RouteTable-SubnetPub1c
+  PublicSubNet1cRouteTableAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TestPublicSubNet1c
+      RouteTableId: !Ref CfPublicRouteTable
+#Subnet Private-1a
+  TestPrivateSubNet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref Az1
+      VpcId: !Ref TestVPC
+      CidrBlock: !Ref CIDR1aPrivate
+      Tags:
+        -  Key: Name
+           Value: !Sub ${PJPrefix}-SubNet1a-Private
+#Subnet Private-1c 
+  TestPrivateSubNet1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref Az2
+      VpcId: !Ref TestVPC
+      CidrBlock: !Ref CIDR1cPrivate
+      Tags:
+        -  Key: Name
+           Value: !Sub ${PJPrefix}-SubNet1c-Private
+#Association RouteTable-SubnetPvt1a
+  PrivateSubNet1aRouteTableAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TestPrivateSubNet1a
+      RouteTableId: !Ref  CfPrivateRouteTable
+#Association RouteTable-SubnetPvt1c
+  PrivateSubNet1cRouteTableAsso:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TestPrivateSubNet1c
+      RouteTableId: !Ref  CfPrivateRouteTable
+
+Outputs:
+  VPC:
+    Value: !Ref TestVPC
+    Export:
+      Name: !Sub ${PJPrefix}-Vpc
+  Subnetpb1a:
+    Value: !Ref TestPublicSubNet1a
+    Export:
+      Name: !Sub ${PJPrefix}-PublicSubNet1a
+  Subnetpb1c:
+    Value: !Ref TestPublicSubNet1c
+    Export:
+      Name: !Sub ${PJPrefix}-PublicSubNet1c

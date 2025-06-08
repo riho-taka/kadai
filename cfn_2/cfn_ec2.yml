@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: EC2 Create
+
+Parameters: 
+  PJPrefix:
+    Type: String
+  KeyName:
+    Description: EC2-keypair
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceType:
+    Type: String
+    Default: t2.micro
+  ImageId:
+    Type: AWS::EC2::Image::Id
+    Default: ami-0bd52466570d44406  #AmazonLinux2
+
+Resources:
+#SecurityGroup-EC2-HTTP,SSH
+  CfSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Sg-public
+      Tags:
+      - Key: Name
+        Value: !Sub ${PJPrefix}-ec2-Sg
+      VpcId: !ImportValue
+        Fn::Sub: ${PJPrefix}-Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: "22"
+          ToPort: "22"
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: "80"
+          ToPort: "80"
+#EC2
+  TestInstance1:  
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          DeleteOnTermination: true
+          GroupSet:
+            - !Ref CfSecurityGroup
+          SubnetId: !ImportValue
+            Fn::Sub: ${PJPrefix}-PublicSubNet1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${PJPrefix}-instance1
+  TestInstance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          DeleteOnTermination: true
+          GroupSet:
+            - !Ref CfSecurityGroup
+          SubnetId: !ImportValue
+            Fn::Sub: ${PJPrefix}-PublicSubNet1c
+      Tags:
+        - Key: Name
+          Value: !Sub ${PJPrefix}-instance2
+Outputs:
+  CfSecurityGroup: 
+    Value: !Ref CfSecurityGroup
+    Export:
+      Name: !Sub ${PJPrefix}-SecurityGroup
