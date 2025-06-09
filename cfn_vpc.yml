@@ -1,21 +1,46 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Create Vpc and 2public/2private subnets 
+
 Parameters:
   PJPrefix:
     Type: String
 
+  Az1:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-1a
+  Az2:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-northeast-1c
+  VPCCIDR:
+    Type: String
+    Description: CIDR Block for VPC
+    Default: 10.1.0.0/21
+  CIDR1aPublic:
+    Type: String
+    Default: 10.1.0.0/24
+  CIDR1cPublic:
+    Type: String
+    Default: 10.1.1.0/24
+  CIDR1aPrivate:
+    Type: String
+    Default: 10.1.2.0/24
+  CIDR1cPrivate:
+    Type: String
+    Default: 10.1.3.0/24
+
+ 
 Resources: 
 #VPC
   TestVPC: 
     Type: AWS::EC2::VPC
     Properties:   
-      CidrBlock: 10.1.0.0/21
+      CidrBlock: !Ref VPCCIDR
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
         - Key: Name
           Value: !Sub ${PJPrefix}-Vpc
-#InternetGateway
+#internetGateway
   TestIGW:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -55,9 +80,9 @@ Resources:
   TestPublicSubNet1a:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: ap-northeast-1a
+      AvailabilityZone: !Ref Az1
       VpcId: !Ref TestVPC
-      CidrBlock: 10.1.0.0/24
+      CidrBlock: !Ref CIDR1aPublic
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -66,9 +91,9 @@ Resources:
   TestPublicSubNet1c:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: ap-northeast-1c
+      AvailabilityZone: !Ref Az2
       VpcId: !Ref TestVPC
-      CidrBlock: 10.1.1.0/24
+      CidrBlock: !Ref CIDR1cPublic
       Tags:
         - Key: Name
           Value: !Sub ${PJPrefix}-SubNet1c-Public
@@ -84,14 +109,14 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref TestPublicSubNet1c
-      RouteTableId: !Ref  CfPublicRouteTable
+      RouteTableId: !Ref CfPublicRouteTable
 #Subnet Private-1a
   TestPrivateSubNet1a:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: ap-northeast-1a
+      AvailabilityZone: !Ref Az1
       VpcId: !Ref TestVPC
-      CidrBlock: 10.1.2.0/24
+      CidrBlock: !Ref CIDR1aPrivate
       Tags:
         -  Key: Name
            Value: !Sub ${PJPrefix}-SubNet1a-Private
@@ -99,9 +124,9 @@ Resources:
   TestPrivateSubNet1c:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone: ap-northeast-1c
+      AvailabilityZone: !Ref Az2
       VpcId: !Ref TestVPC
-      CidrBlock: 10.1.3.0/24
+      CidrBlock: !Ref CIDR1cPrivate
       Tags:
         -  Key: Name
            Value: !Sub ${PJPrefix}-SubNet1c-Private
