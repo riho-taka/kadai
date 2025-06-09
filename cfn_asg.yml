@@ -1,16 +1,23 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: ASG 
+Description: AutoScalingGroup/TargetTrackingScaling
+
 Parameters: 
+  PJPrefix:
+    Type: String
   KeyName:
     Description: KeyPair to allow SSH access
     Type: "AWS::EC2::KeyPair::KeyName"
+  TargetTrackingConfigurationTargetValue:
+    Type: Number
+
 Resources:
-  # セキュリティグループ
+#SecurityGroup-HTTP,SSH
   CfSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Test-SG-public
-      VpcId: !ImportValue TestVPC
+      GroupDescription: AsgSG-public
+      VpcId: !ImportValue
+        Fn::Sub: ${PJPrefix}-Vpc
       SecurityGroupIngress:
         - IpProtocol: tcp
           CidrIp: 0.0.0.0/0
@@ -20,18 +27,28 @@ Resources:
           CidrIp: 0.0.0.0/0
           FromPort: "80"
           ToPort: "80"
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-AsgSG"
 
-  # 起動テンプレート
+# Template
   MyTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName: MyTemplate
       LaunchTemplateData:
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            amazon-linux-extras install epel -y
+            yum install nginx -y
+            systemctl start nginx
+            systemctl enable nginx
+            yum install unzip -y
         TagSpecifications:
           - ResourceType: instance
             Tags: 
               - Key: Name
-                Value: test_cf_server
+                Value: !Sub ${PJPrefix}-Template
         KeyName: !Ref KeyName
         ImageId: ami-037843ed9009f7d41
         InstanceType: t2.micro
@@ -44,30 +61,32 @@ Resources:
     Properties:
       AutoScalingGroupName: !Sub ${AWS::StackName}
       VPCZoneIdentifier:
-        - !ImportValue TestPublicSubNet1a
-        - !ImportValue TestPublicSubNet1c
+        - !ImportValue 
+            Fn::Sub: ${PJPrefix}-PublicSubNet1a
+        - !ImportValue 
+            Fn::Sub: ${PJPrefix}-PublicSubNet1c
       LaunchTemplate:
         LaunchTemplateId: !Ref MyTemplate
         Version: !GetAtt 'MyTemplate.LatestVersionNumber'
       TargetGroupARNs:
-        - !ImportValue CfTargetGroup
+        - !ImportValue 
+            Fn::Sub: ${PJPrefix}-TargetGroup
       DesiredCapacity: 2
       MaxSize: 4
       MinSize: 2
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}
+          Value: !Sub ${PJPrefix}-AsgServer
           PropagateAtLaunch: true
-
   ASGScalingPolicyHigh:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
       AutoScalingGroupName: !Ref TestASG
-      PolicyType: StepScaling
-      AdjustmentType: ChangeInCapacity
-      StepAdjustments: 
-        - MetricIntervalLowerBound: 0
-          ScalingAdjustment: 1
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: !Ref TargetTrackingConfigurationTargetValue
   MyAlarmHighCPU:
     Type: AWS::CloudWatch::Alarm
     Properties:
