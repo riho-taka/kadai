@@ -1,13 +1,16 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: ALB Create
+Description: LoadBalancer
+
+Parameters:
+  PJPrefix:
+    Type: String
 
 Resources:
-#セキュリティグループ
+#securitygroup-http
   TestAlbSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
         GroupDescription: ALB SG
-        GroupName: !Sub ${AWS::StackName}-sg
         SecurityGroupIngress:
           - IpProtocol: tcp
             FromPort: 80
@@ -15,30 +18,33 @@ Resources:
             CidrIp: 0.0.0.0/0
         Tags:
           - Key: Name
-            Value: !Sub ${AWS::StackName}-sg
-        VpcId: !ImportValue TestVPC
+            Value: !Sub ${PJPrefix}-AlbSG
+        VpcId: !ImportValue 
+          Fn::Sub: ${PJPrefix}-Vpc
 #ALB
   TestALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       IpAddressType: ipv4
-      Name: !Sub ${AWS::StackName}
       Scheme: internet-facing
       SecurityGroups: 
         - !Ref TestAlbSG
       Subnets: 
-        - !ImportValue TestPublicSubNet1a
-        - !ImportValue TestPublicSubNet1c
+        - !ImportValue 
+            Fn::Sub: ${PJPrefix}-PublicSubNet1a
+        - !ImportValue 
+            Fn::Sub: ${PJPrefix}-PublicSubNet1c
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}
+          Value: !Sub ${PJPrefix}-Alb
       Type: application
   ListenerHTTP:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !ImportValue CfTargetGroup
+          TargetGroupArn: !ImportValue 
+            Fn::Sub: ${PJPrefix}-TargetGroup
       LoadBalancerArn: !Ref TestALB
       Port: 80
       Protocol: HTTP

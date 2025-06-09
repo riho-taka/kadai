@@ -2,22 +2,29 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: EC2 Create
 
 Parameters: 
-  KeyName:
-    Description: KeyPair to allow SSH access
-    Type: "AWS::EC2::KeyPair::KeyName"
-  MyIP:
-    Description: IP address allowed to access EC2
+  PJPrefix:
     Type: String
-    Default: 60.120.68.152
+  KeyName:
+    Description: EC2-keypair
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceType:
+    Type: String
+    Default: t2.micro
+  ImageId:
+    Type: AWS::EC2::Image::Id
+    Default: ami-0bd52466570d44406  #AmazonLinux2
 
 Resources:
-#セキュリティグループ
+#SecurityGroup-EC2-HTTP,SSH
   CfSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: Test-SG-public
-      GroupDescription: Test-SG-public
-      VpcId: !ImportValue TestVPC
+      GroupDescription: Sg-public
+      Tags:
+      - Key: Name
+        Value: !Sub ${PJPrefix}-ec2-Sg
+      VpcId: !ImportValue
+        Fn::Sub: ${PJPrefix}-Vpc
       SecurityGroupIngress:
         - IpProtocol: tcp
           CidrIp: 0.0.0.0/0
@@ -28,40 +35,42 @@ Resources:
           FromPort: "80"
           ToPort: "80"
 #EC2
-  TestInstance1:
-    Type: "AWS::EC2::Instance"
+  TestInstance1:  
+    Type: AWS::EC2::Instance
     Properties:
       KeyName: !Ref KeyName
-      ImageId: ami-037843ed9009f7d41
-      InstanceType: t2.micro
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: "0"
           DeleteOnTermination: true
           GroupSet:
             - !Ref CfSecurityGroup
-          SubnetId: !ImportValue TestPublicSubNet1a
+          SubnetId: !ImportValue
+            Fn::Sub: ${PJPrefix}-PublicSubNet1a
       Tags:
         - Key: Name
-          Value: Test-cf-instance1
+          Value: !Sub ${PJPrefix}-instance1
   TestInstance2:
-    Type: "AWS::EC2::Instance"
+    Type: AWS::EC2::Instance
     Properties:
       KeyName: !Ref KeyName
-      ImageId: ami-037843ed9009f7d41
-      InstanceType: t2.micro
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: "0"
           DeleteOnTermination: true
           GroupSet:
             - !Ref CfSecurityGroup
-          SubnetId: !ImportValue TestPublicSubNet1c
+          SubnetId: !ImportValue
+            Fn::Sub: ${PJPrefix}-PublicSubNet1c
       Tags:
         - Key: Name
-          Value: Test-cf-instance2
+          Value: !Sub ${PJPrefix}-instance2
 Outputs:
   CfSecurityGroup: 
     Value: !Ref CfSecurityGroup
     Export:
-      Name: CfSecurityGroup
+      Name: !Sub ${PJPrefix}-SecurityGroup
