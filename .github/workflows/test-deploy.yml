@@ -22,5 +22,5 @@ jobs:
       uses: aws-actions/aws-cloudformation-github-deploy@v1
       with:
         name: test-cfn-stack
-        template: ./cfn_ec2.yml
+        template: ./cfn_vpc.yml
         no-fail-on-empty-changeset: "1"
