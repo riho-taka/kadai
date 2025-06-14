@@ -4,6 +4,7 @@ Description: Create Vpc and 2public/2private subnets
 Parameters:
   PJPrefix:
     Type: String
+    Default: Test
 
   Az1:
     Type: AWS::EC2::AvailabilityZone::Name
