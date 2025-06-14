@@ -1,0 +1,9 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create ECR Stack Test
+
+Resources:
+# ECR Repository
+  TestEcr:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: test-ecr-repo

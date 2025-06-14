@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create ECS Task Test
+
+Parameters:
+  PJPrefix:
+    Type: String
+
+Resources:
+# ECS Cluster
+  TestEcsCluster:
+    Type: "AWS::ECS::Cluster"
+    Properties:
+      ClusterName: "test-ecs-cls"
+ 
+#  ECS LogGroup
+  TestEcsLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: "/ecs/logs/test-ecs-group"
+  
+# Security Group
+  CfSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Sg-public
+      Tags:
+      - Key: Name
+        Value: !Sub ${PJPrefix}-ec2-Sg
+      VpcId: !ImportValue
+               Fn::Sub: ${PJPrefix}-Vpc
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        CidrIp: 60.120.68.152/32
+        FromPort: "22"
+        ToPort: "22"
+      - IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+        FromPort: "80"
+        ToPort: "80"
+
+#TargetGroup
+  TestTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      VpcId: !ImportValue
+               Fn::Sub: ${PJPrefix}-Vpc
+      Name: "test-targetgroup"
+      Protocol: HTTP
+      Port: 80
+      TargetType: ip
+
+#Internet ALB
+  TestInternetAlb:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: "test-internet-Alb"
+      Tags:
+        - Key: Name
+          Value: "test-internet-alb"
+      Scheme: "internet-facing"
+      LoadBalancerAttributes:
+        - Key: "deletion_protection.enabled"
+          Value: false
+        - Key: "idle_timeout.timeout_seconds"
+          Value: 60
+      SecurityGroups:
+        -  !Ref CfSecurityGroup
+      Subnets:
+        -  !ImportValue
+            Fn::Sub: ${PJPrefix}-PublicSubNet1a
+        -  !ImportValue
+            Fn::Sub: ${PJPrefix}-PublicSubNet1c
+
+  TestAlbListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref TestTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref TestInternetAlb
+      Port: 80
+      Protocol: HTTP
+
+
+Outputs:
+  TestEcsCluster:
+    Value: !Ref TestEcsCluster
+    Export:
+      Name: TestEcsCluster
+
+  TestEcsLogGroup:
+    Value: !Ref TestEcsLogGroup
+    Export:
+      Name: TestEcsLogGroup
+  
+  TestTargetGroup:
+    Value: !Ref TestTargetGroup
+    Export:
+      Name: TestTargetGroup
+
+  TestAlbListener:
+    Value: !Ref TestAlbListener
+    Export:
+      Name: TestAlbListener

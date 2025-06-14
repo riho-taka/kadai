@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create ECS Task Test
+
+Parameters:
+  PJPrefix:
+    Type: String
+
+Resources:
+#  ECS Task Role
+  TestEcsTaskExecRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "test-ecs-taskexec-role"
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+ 
+#  ECS TaskDefinition
+  TestEcsTaskDefinition:
+    Type: "AWS::ECS::TaskDefinition"
+    Properties:
+      Cpu: 256
+      ExecutionRoleArn: !Ref TestEcsTaskExecRole
+      Family: "test-ecs-task"
+      Memory: 512
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      # ContainerDefinitions
+      ContainerDefinitions:
+        - Name: "test-ecs-container"
+          Image: "867344433984.dkr.ecr.ap-northeast-1.amazonaws.com/test-ecr-repo:latest"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !ImportValue TestEcsLogGroup
+              awslogs-region: ap-northeast-1
+              awslogs-stream-prefix: "test"
+          MemoryReservation: 128
+          PortMappings:
+            - HostPort: 80
+              Protocol: tcp
+              ContainerPort: 80
+
+#  ECS Service
+  TestEcsService:
+    Type: "AWS::ECS::Service"
+    Properties:
+      Cluster: !ImportValue TestEcsCluster
+      DesiredCount: 1
+      LaunchType: FARGATE
+      LoadBalancers:
+        -
+          TargetGroupArn: !ImportValue TestTargetGroup
+          ContainerPort: 80
+          ContainerName: "test-ecs-container"
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups: 
+            - sg-060b9e46fbc924c61
+          Subnets:
+            - !ImportValue
+                Fn::Sub: ${PJPrefix}-PublicSubNet1a
+            - !ImportValue
+                Fn::Sub: ${PJPrefix}-PublicSubNet1c
+      ServiceName: "test-ecs-service"
+      TaskDefinition: !Ref TestEcsTaskDefinition
