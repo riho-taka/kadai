@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: IAM Role for GitHub Actions with OIDC and limited permissions
+
+Parameters:
+  GitHubRepo:
+    Type: String
+    Description: riho-taka/test-cfn
+  GitHubBranch:
+    Type: String
+    Default: main
+    Description: main
+
+Resources:
+  GitHubOIDCRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: GitHubActionsOIDCRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: arn:aws:iam::{{867344433984}}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubRepo}:ref:refs/heads/${GitHubBranch}
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+      Policies:
+        - PolicyName: GitHubActionsCloudFormationAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: CloudFormationAccess
+                Effect: Allow
+                Action:
+                  - cloudformation:*
+                Resource: '*'
+
+              - Sid: ReadOnlyOthers
+                Effect: Allow
+                Action:
+                  - ec2:Describe*
+                  - autoscaling:Describe*
+                  - elasticloadbalancing:Describe*
+                  - iam:Get*
+                  - iam:List*
+                  - secretsmanager:Describe*
+                  - secretsmanager:Get*
+                Resource: '*'
