@@ -30,10 +30,6 @@ Resources:
                Fn::Sub: ${PJPrefix}-Vpc
       SecurityGroupIngress:
       - IpProtocol: tcp
-        CidrIp: 60.120.68.152/32
-        FromPort: "22"
-        ToPort: "22"
-      - IpProtocol: tcp
         CidrIp: 0.0.0.0/0
         FromPort: "80"
         ToPort: "80"
@@ -102,3 +98,7 @@ Outputs:
     Value: !Ref TestAlbListener
     Export:
       Name: TestAlbListener
+  
+  CfSecurityGroup:
+    Value: !Ref CfSecurityGroup
+    Export: TestSG-ECS
