@@ -2,9 +2,10 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: Create ECS Task Test
 
 Parameters:
-  PJPrefix:
+  PJPrefix: 
     Type: String
-
+    Default: Test
+    
 Resources:
 #  ECS Task Role
   TestEcsTaskExecRole:
